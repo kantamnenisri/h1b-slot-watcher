@@ -44,3 +44,6 @@ After editing `monitor.py` locally:
 1. Clone the repository.
 2. Install dependencies: `pip install -r requirements.txt`
 3. Run locally: `python monitor.py`
+
+## Health Check
+- Added /ping endpoint for automated health monitoring.
