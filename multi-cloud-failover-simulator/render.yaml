@@ -1,0 +1,5 @@
+services:
+  - type: web
+    name: multi-cloud-failover-simulator
+    env: docker
+    plan: free
