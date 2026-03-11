@@ -92,6 +92,10 @@ def live_summary():
     """
     return html, 200
 
+@app.route('/ping')
+def ping():
+    return 'OK'
+
 @app.route('/test-whatsapp')
 def test_whatsapp_route():
     send_whatsapp("🧪 Manual Test: Your H1B Watcher is connected!")
