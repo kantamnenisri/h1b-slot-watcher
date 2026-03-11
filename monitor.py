@@ -11,14 +11,80 @@ from flask import Flask
 app = Flask(__name__)
 
 @app.route('/')
-def health_check():
-    return "H1B Watcher is Running!", 200
+def live_summary():
+    now_str = datetime.now().strftime("%d-%b %H:%M:%S")
+    
+    # Simple HTML/CSS for a clean dashboard look
+    html = f"""
+    <html>
+    <head>
+        <title>H1B Watcher Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 600px; margin: auto; background: #f4f7f6; }}
+            .card {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }}
+            h1 {{ color: #2c3e50; font-size: 24px; margin-top: 0; }}
+            .status-list {{ list-style: none; padding: 0; }}
+            .status-item {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }}
+            .status-item:last-child {{ border-bottom: none; }}
+            .label {{ font-weight: bold; color: #34495e; }}
+            .value {{ color: #27ae60; font-weight: 500; }}
+            .log {{ font-size: 14px; padding: 10px; border-radius: 4px; background: #f8f9fa; border-left: 4px solid #ddd; }}
+            .green {{ border-left-color: #27ae60; color: #1e7e34; }}
+            .red {{ border-left-color: #e74c3c; color: #c0392b; }}
+            .footer {{ font-size: 12px; color: #7f8c8d; text-align: center; margin-top: 20px; }}
+        </style>
+        <meta http-equiv="refresh" content="60">
+    </head>
+    <body>
+        <div class="card">
+            <h1>H1B Watcher Dashboard</h1>
+            <p>🕒 <b>Last Check:</b> {now_str}</p>
+            
+            <h3>📊 Current Status</h3>
+            <div class="status-list">
+    """
+    
+    all_found = False
+    for src, data_dict in previous_state.items():
+        for i_id, item in data_dict.items():
+            html += f"""
+                <div class="status-item">
+                    <span class="label">📍 {i_id}</span>
+                    <span class="value">{item.get('earliest')}</span>
+                </div>
+            """
+            all_found = True
+    
+    if not all_found:
+        html += "<p><i>Scanning sources... Initial data loading.</i></p>"
+    
+    html += f"""
+            </div>
+        </div>
+
+        <div class="card log green">
+            <b>🟢 Last Release:</b><br>{last_released_global}
+        </div>
+
+        <div class="card log red">
+            <b>🔴 Last Consumed:</b><br>{last_consumed_global}
+        </div>
+
+        <div class="footer">
+            Checking sources every 60 seconds. <br>
+            Hourly summary at the 5th minute of every hour.
+        </div>
+    </body>
+    </html>
+    """
+    return html, 200
 
 # ─── CONFIG ────────────────────────────────────────────────
 PHONE_NUMBER = "+13058143780"
 CALLMEBOT_APIKEY = "5042020"
 CHECK_INTERVAL = 60
-SUMMARY_MINUTE = 5 # Send summary at the 5th minute of every hour
+SUMMARY_MINUTE = 5 
 
 # ─── STATE ─────────────────────────────────────────────────
 previous_state = {}
@@ -108,7 +174,6 @@ def build_message(source, is_summary=False):
     lines = [f"{header}", f"🕐 {now_str}", "───"]
     
     lines.append("📊 CURRENT STATUS:")
-    # Collect all current slots from state to show a full summary
     all_found = False
     for src, data_dict in previous_state.items():
         for i_id, item in data_dict.items():
@@ -124,27 +189,18 @@ def build_message(source, is_summary=False):
 # ─── BACKGROUND MONITOR TASK ───────────────────────────────
 def monitor_task():
     global last_summary_hour
-    print("🚀 H1B Monitor with Hourly Summaries Started...")
+    print("🚀 H1B Monitor Started...")
     
     while True:
         now = datetime.now()
-        
-        # 1. CHECK FOR HOURLY SUMMARY (at the 5th minute)
         if now.minute == SUMMARY_MINUTE and now.hour != last_summary_hour:
-            print(f"Sending hourly summary at {now.strftime('%H:%M:%S')}")
             send_whatsapp(build_message("Global", is_summary=True))
             last_summary_hour = now.hour
             
-        # 2. CHECK FOR IMMEDIATE UPDATES
-        sources = [
-            (fetch_visaslots_info(), "visaslots.info"),
-            (fetch_usvisaslots_app(), "usvisaslots.app"),
-            (fetch_checkvisaslots(), "checkvisaslots.com")
-        ]
-        
-        for data, key in sources:
+        for data, key in [(fetch_visaslots_info(), "visaslots.info"), 
+                          (fetch_usvisaslots_app(), "usvisaslots.app"), 
+                          (fetch_checkvisaslots(), "checkvisaslots.com")]:
             if process_updates(data, key):
-                print(f"Immediate update detected on {key}")
                 send_whatsapp(build_message(key))
                 
         time.sleep(CHECK_INTERVAL)
