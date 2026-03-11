@@ -14,7 +14,6 @@ app = Flask(__name__)
 def live_summary():
     now_str = datetime.now().strftime("%d-%b %H:%M:%S")
     
-    # Simple HTML/CSS for a clean dashboard look
     html = f"""
     <html>
     <head>
@@ -33,6 +32,7 @@ def live_summary():
             .green {{ border-left-color: #27ae60; color: #1e7e34; }}
             .red {{ border-left-color: #e74c3c; color: #c0392b; }}
             .footer {{ font-size: 12px; color: #7f8c8d; text-align: center; margin-top: 20px; }}
+            .btn {{ display: inline-block; padding: 8px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 10px; }}
         </style>
         <meta http-equiv="refresh" content="60">
     </head>
@@ -57,7 +57,7 @@ def live_summary():
             all_found = True
     
     if not all_found:
-        html += "<p><i>Scanning sources... Initial data loading.</i></p>"
+        html += "<p><i>Scanning sources... Data loading in 60s.</i></p><a href='/' class='btn'>Refresh Now</a>"
     
     html += f"""
             </div>
@@ -73,7 +73,7 @@ def live_summary():
 
         <div class="footer">
             Checking sources every 60 seconds. <br>
-            Hourly summary at the 5th minute of every hour.
+            Hourly summary at the 13th minute of every hour.
         </div>
     </body>
     </html>
@@ -84,7 +84,7 @@ def live_summary():
 PHONE_NUMBER = "+13058143780"
 CALLMEBOT_APIKEY = "5042020"
 CHECK_INTERVAL = 60
-SUMMARY_MINUTE = 5 
+SUMMARY_MINUTE = 13 # Changed from 5 to 13 per user request
 
 # ─── STATE ─────────────────────────────────────────────────
 previous_state = {}
@@ -194,6 +194,7 @@ def monitor_task():
     while True:
         now = datetime.now()
         if now.minute == SUMMARY_MINUTE and now.hour != last_summary_hour:
+            print(f"Sending hourly summary at {now.strftime('%H:%M:%S')}")
             send_whatsapp(build_message("Global", is_summary=True))
             last_summary_hour = now.hour
             
