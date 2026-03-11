@@ -1,0 +1,7 @@
+{
+    "title": "High CPU on payment-service",
+    "severity": "P1",
+    "description": "CPU 98%, deployed v2.3.1 at 11:30 AM",
+    "logs": ["CPU spiked at 11:45 AM", "Response time 4200ms"],
+    "metrics": {"cpu": 98, "memory": 87}
+}
