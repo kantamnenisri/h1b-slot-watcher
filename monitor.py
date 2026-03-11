@@ -73,7 +73,7 @@ def live_summary():
 
         <div class="footer">
             Checking sources every 60 seconds. <br>
-            Hourly summary at the 13th minute of every hour.
+            Hourly summary at the 20th minute of every hour.
         </div>
     </body>
     </html>
@@ -84,7 +84,7 @@ def live_summary():
 PHONE_NUMBER = "+13058143780"
 CALLMEBOT_APIKEY = "5042020"
 CHECK_INTERVAL = 60
-SUMMARY_MINUTE = 13 
+SUMMARY_MINUTE = 20 # Changed from 13 to 20 per user request
 
 # ─── STATE ─────────────────────────────────────────────────
 previous_state = {}
