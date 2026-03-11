@@ -84,7 +84,7 @@ def live_summary():
 PHONE_NUMBER = "+13058143780"
 CALLMEBOT_APIKEY = "5042020"
 CHECK_INTERVAL = 60
-SUMMARY_MINUTE = 13 # Changed from 5 to 13 per user request
+SUMMARY_MINUTE = 13 
 
 # ─── STATE ─────────────────────────────────────────────────
 previous_state = {}
@@ -167,10 +167,17 @@ def process_updates(current_data: list, source_key: str):
     if changes: previous_state[source_key] = current_dict
     return changes
 
-def build_message(source, is_summary=False):
+def build_message(source, is_summary=False, is_startup=False):
     now_dt = datetime.now()
     now_str = now_dt.strftime("%d-%b %H:%M")
-    header = "📋 HOURLY H1B SUMMARY" if is_summary else f"🔔 H1B ALERT [{source}]"
+    
+    if is_startup:
+        header = "🚀 H1B WATCHER RESTARTED"
+    elif is_summary:
+        header = "📋 HOURLY H1B SUMMARY"
+    else:
+        header = f"🔔 H1B ALERT [{source}]"
+        
     lines = [f"{header}", f"🕐 {now_str}", "───"]
     
     lines.append("📊 CURRENT STATUS:")
@@ -181,7 +188,7 @@ def build_message(source, is_summary=False):
             all_found = True
     
     if not all_found:
-        lines.append("⚠️ No H1B slots found across sources.")
+        lines.append("⚠️ Scanning sources... First update coming in 60s.")
         
     lines.extend(["───", f"🟢 LAST RELEASE: {last_released_global}", f"🔴 LAST CONSUMED: {last_consumed_global}"])
     return "\n".join(lines)
@@ -191,18 +198,35 @@ def monitor_task():
     global last_summary_hour
     print("🚀 H1B Monitor Started...")
     
+    # 1. IMMEDIATE STARTUP NOTIFICATION
+    send_whatsapp("🚀 H1B Watcher Service Started/Restarted!\nPerforming initial scan...")
+    
     while True:
         now = datetime.now()
+        
+        # 2. PERFORM SCAN
+        sources = [
+            (fetch_visaslots_info(), "visaslots.info"), 
+            (fetch_usvisaslots_app(), "usvisaslots.app"), 
+            (fetch_checkvisaslots(), "checkvisaslots.com")
+        ]
+        
+        # 3. IF THIS IS THE VERY FIRST SCAN (empty state), send an immediate summary
+        is_first_scan = not any(previous_state.values())
+        
+        for data, key in sources:
+            if process_updates(data, key):
+                print(f"Immediate update detected on {key}")
+                send_whatsapp(build_message(key))
+        
+        if is_first_scan and any(previous_state.values()):
+            print("Initial scan complete. Sending first live status.")
+            send_whatsapp(build_message("Global", is_summary=True, is_startup=True))
+
+        # 4. HOURLY SUMMARY CHECK
         if now.minute == SUMMARY_MINUTE and now.hour != last_summary_hour:
-            print(f"Sending hourly summary at {now.strftime('%H:%M:%S')}")
             send_whatsapp(build_message("Global", is_summary=True))
             last_summary_hour = now.hour
-            
-        for data, key in [(fetch_visaslots_info(), "visaslots.info"), 
-                          (fetch_usvisaslots_app(), "usvisaslots.app"), 
-                          (fetch_checkvisaslots(), "checkvisaslots.com")]:
-            if process_updates(data, key):
-                send_whatsapp(build_message(key))
                 
         time.sleep(CHECK_INTERVAL)
 
