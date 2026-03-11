@@ -28,8 +28,19 @@ Render's Free Tier "sleeps" after 15 minutes of inactivity. To keep the watcher 
 4. **URL:** `https://h1b-slot-watcher.onrender.com/`
 5. **Monitoring Interval:** 5 or 10 minutes.
 
+## ⚙️ Configuration
+To receive alerts on your own phone, you must update the following variables in `monitor.py`:
+
+1.  **PHONE_NUMBER:** Your WhatsApp number with country code (e.g., `+91XXXXXXXXXX`).
+2.  **CALLMEBOT_APIKEY:** Your unique API key from CallMeBot.
+
+### How to apply changes:
+After editing `monitor.py` locally:
+1.  **Commit the changes:** `git commit -am "Update credentials"`
+2.  **Push to GitHub:** `git push origin master`
+3.  **Render will automatically redeploy** and start using your new number.
+
 ## Setup
 1. Clone the repository.
 2. Install dependencies: `pip install -r requirements.txt`
-3. Update `PHONE_NUMBER` and `CALLMEBOT_APIKEY` in `monitor.py`.
-4. Run: `python monitor.py`
+3. Run locally: `python monitor.py`
