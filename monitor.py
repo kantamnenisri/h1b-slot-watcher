@@ -10,6 +10,9 @@ from flask import Flask
 # ─── FLASK APP FOR RENDER FREE TIER ────────────────────────
 app = Flask(__name__)
 
+# Global log for debugging on the dashboard
+last_api_status = "No attempts yet"
+
 @app.route('/')
 def live_summary():
     now_str = datetime.now().strftime("%d-%b %H:%M:%S")
@@ -33,6 +36,7 @@ def live_summary():
             .red {{ border-left-color: #e74c3c; color: #c0392b; }}
             .footer {{ font-size: 12px; color: #7f8c8d; text-align: center; margin-top: 20px; }}
             .btn {{ display: inline-block; padding: 8px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; margin-top: 10px; }}
+            .api-info {{ font-size: 11px; color: #95a5a6; }}
         </style>
         <meta http-equiv="refresh" content="60">
     </head>
@@ -40,6 +44,7 @@ def live_summary():
         <div class="card">
             <h1>H1B Watcher Dashboard</h1>
             <p>🕒 <b>Last Check:</b> {now_str}</p>
+            <p class="api-info">📡 <b>WhatsApp API Status:</b> {last_api_status}</p>
             
             <h3>📊 Current Status</h3>
             <div class="status-list">
@@ -84,7 +89,7 @@ def live_summary():
 PHONE_NUMBER = "+13058143780"
 CALLMEBOT_APIKEY = "5042020"
 CHECK_INTERVAL = 60
-SUMMARY_MINUTE = 20 # Changed from 13 to 20 per user request
+SUMMARY_MINUTE = 20 
 
 # ─── STATE ─────────────────────────────────────────────────
 previous_state = {}
@@ -94,12 +99,15 @@ last_summary_hour = -1
 
 # ─── CALLMEBOT WHATSAPP ─────────────────────────────────────
 def send_whatsapp(message: str):
+    global last_api_status
     encoded = quote(message)
     url = f"https://api.callmebot.com/whatsapp.php?phone={PHONE_NUMBER}&text={encoded}&apikey={CALLMEBOT_APIKEY}"
     try:
         r = requests.get(url, timeout=15)
+        last_api_status = f"Status {r.status_code} at {datetime.now().strftime('%H:%M:%S')}"
         print(f"[{datetime.now().strftime('%H:%M:%S')}] WhatsApp Status: {r.status_code}")
     except Exception as e:
+        last_api_status = f"Error: {str(e)[:50]}"
         print(f"[WhatsApp Error] {e}")
 
 # ─── SCRAPING LOGIC ────────────────────────────────────────
@@ -172,7 +180,7 @@ def build_message(source, is_summary=False, is_startup=False):
     now_str = now_dt.strftime("%d-%b %H:%M")
     
     if is_startup:
-        header = "🚀 H1B WATCHER RESTARTED"
+        header = "🚀 H1B WATCHER STARTED"
     elif is_summary:
         header = "📋 HOURLY H1B SUMMARY"
     else:
@@ -188,9 +196,9 @@ def build_message(source, is_summary=False, is_startup=False):
             all_found = True
     
     if not all_found:
-        lines.append("⚠️ Scanning sources... First update coming in 60s.")
+        lines.append("⚠️ Scanning sources...")
         
-    lines.extend(["───", f"🟢 LAST RELEASE: {last_released_global}", f"🔴 LAST CONSUMED: {last_consumed_global}"])
+    lines.extend(["───", f"🟢 LAST: {last_released_global}", f"🔴 LAST: {last_consumed_global}"])
     return "\n".join(lines)
 
 # ─── BACKGROUND MONITOR TASK ───────────────────────────────
@@ -198,32 +206,28 @@ def monitor_task():
     global last_summary_hour
     print("🚀 H1B Monitor Started...")
     
-    # 1. IMMEDIATE STARTUP NOTIFICATION
-    send_whatsapp("🚀 H1B Watcher Service Started/Restarted!\nPerforming initial scan...")
-    
     while True:
         now = datetime.now()
         
-        # 2. PERFORM SCAN
+        # 1. PERFORM SCAN
         sources = [
             (fetch_visaslots_info(), "visaslots.info"), 
             (fetch_usvisaslots_app(), "usvisaslots.app"), 
             (fetch_checkvisaslots(), "checkvisaslots.com")
         ]
         
-        # 3. IF THIS IS THE VERY FIRST SCAN (empty state), send an immediate summary
         is_first_scan = not any(previous_state.values())
         
         for data, key in sources:
             if process_updates(data, key):
-                print(f"Immediate update detected on {key}")
                 send_whatsapp(build_message(key))
         
+        # Send initial summary ONLY once it has data
         if is_first_scan and any(previous_state.values()):
             print("Initial scan complete. Sending first live status.")
             send_whatsapp(build_message("Global", is_summary=True, is_startup=True))
 
-        # 4. HOURLY SUMMARY CHECK
+        # Hourly summary check
         if now.minute == SUMMARY_MINUTE and now.hour != last_summary_hour:
             send_whatsapp(build_message("Global", is_summary=True))
             last_summary_hour = now.hour
