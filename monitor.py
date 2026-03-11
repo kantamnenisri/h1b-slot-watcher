@@ -42,7 +42,7 @@ def live_summary():
     </head>
     <body>
         <div class="card">
-            <h1>H1B Watcher Dashboard</h1>
+            <h1>H1B Watcher Dashboard v1.1</h1>
             <p>🕒 <b>Last Check:</b> {now_str}</p>
             <p class="api-info">📡 <b>WhatsApp API Status:</b> {last_api_status}</p>
             
