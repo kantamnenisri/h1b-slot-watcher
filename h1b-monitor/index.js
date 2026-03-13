@@ -30,7 +30,15 @@ async function sendWhatsAppMessage(message) {
   return response.ok;
 }
 
+let isChecking = false;
+
 async function checkH1BSlots(forceSend = false) {
+  if (isChecking && !forceSend) {
+    console.log('Previous check still in progress. Skipping...');
+    return { status: 'busy' };
+  }
+  
+  isChecking = true;
   let browser;
   try {
     browser = await puppeteer.launch({
@@ -38,6 +46,7 @@ async function checkH1BSlots(forceSend = false) {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(60000);
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
     await page.goto('https://checkvisaslots.com/latest-us-visa-availability/h-1b-regular/', {
@@ -104,6 +113,7 @@ async function checkH1BSlots(forceSend = false) {
     console.error('Check failed:', error.message);
     throw error;
   } finally {
+    isChecking = false;
     if (browser) await browser.close();
   }
 }
