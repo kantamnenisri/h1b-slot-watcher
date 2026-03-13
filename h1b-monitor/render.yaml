@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: h1b-monitor
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: WA_PHONE
+        sync: false
+      - key: WA_APIKEY
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
