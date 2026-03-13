@@ -1,13 +1,11 @@
 services:
   - type: web
     name: h1b-monitor
-    env: node
+    env: docker
     plan: free
-    buildCommand: npm install
-    startCommand: node index.js
     envVars:
       - key: PORT
-        value: 10000
+        value: 3000
       - key: WA_PHONE
         sync: false
       - key: WA_APIKEY
